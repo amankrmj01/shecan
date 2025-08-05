@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/services/user_session_service.dart';
-import '../../domain/entities/leaderboard/leaderboard_entity.dart';
+import '../../domain/entities/user/user_entity.dart';
 import 'cubit/leaderboard_cubit.dart';
 
 class LeaderboardScreen extends StatelessWidget {
@@ -14,15 +14,12 @@ class LeaderboardScreen extends StatelessWidget {
     return BlocProvider(
       create: (context) => sl<LeaderboardCubit>()..loadLeaderboard(),
       child: Scaffold(
-        backgroundColor: Colors.grey[100],
         appBar: AppBar(
           title: const Text(
             'Leaderboard',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          backgroundColor: Colors.white,
           elevation: 1,
-          foregroundColor: Colors.black87,
           actions: [
             BlocBuilder<LeaderboardCubit, LeaderboardState>(
               builder: (context, state) {
@@ -54,7 +51,7 @@ class LeaderboardScreen extends StatelessWidget {
                     Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
                     const SizedBox(height: 16),
                     Text(
-                      'Error loading leaderboard',
+                      'Error loading user',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -107,7 +104,7 @@ class LeaderboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLeaderboardCard(LeaderboardEntity user, int index) {
+  Widget _buildLeaderboardCard(UserEntity user, int index) {
     // Calculate rank dynamically based on position in sorted list (index + 1)
     final rank = index + 1;
     final isTopThree = rank <= 3;
@@ -116,90 +113,124 @@ class LeaderboardScreen extends StatelessWidget {
     final userSession = UserSessionService();
     final isCurrentUser = userSession.isCurrentUser(user.email);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: isCurrentUser ? Colors.deepPurple[50] : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: isCurrentUser
-            ? Border.all(color: Colors.deepPurple, width: 2)
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            // Rank Badge
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: isTopThree ? _getRankColor(rank) : Colors.grey[300],
-                borderRadius: BorderRadius.circular(20),
+    return Builder(
+      builder: (context) {
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: isCurrentUser
+                ? (isDark
+                      ? Colors.deepPurple.withOpacity(0.2)
+                      : Colors.deepPurple[50])
+                : theme.cardTheme.color,
+            borderRadius: BorderRadius.circular(16),
+            border: isCurrentUser
+                ? Border.all(
+                    color: isDark ? Colors.deepPurple[300]! : Colors.deepPurple,
+                    width: 2,
+                  )
+                : null,
+            boxShadow: [
+              BoxShadow(
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.3)
+                    : Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-              child: Center(
-                child: isTopThree
-                    ? Icon(_getRankIcon(rank), color: Colors.white, size: 20)
-                    : Text(
-                        '$rank',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Rank Badge
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: isTopThree
+                        ? _getRankColor(rank)
+                        : (isDark ? Colors.grey[600] : Colors.grey[300]),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Center(
+                    child: isTopThree
+                        ? Icon(
+                            _getRankIcon(rank),
+                            color: Colors.white,
+                            size: 20,
+                          )
+                        : Text(
+                            '$rank',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user.name,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: isCurrentUser
+                              ? FontWeight.bold
+                              : FontWeight.w600,
+                          color: isCurrentUser
+                              ? (isDark
+                                    ? Colors.deepPurple[300]
+                                    : Colors.deepPurple)
+                              : theme.textTheme.bodyLarge?.color,
                         ),
                       ),
-              ),
-            ),
-            const SizedBox(width: 16),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${user.points.toStringAsFixed(0)} points',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    user.name,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: isCurrentUser
-                          ? FontWeight.bold
-                          : FontWeight.w600,
-                      color: isCurrentUser ? Colors.deepPurple : Colors.black87,
+                if (isCurrentUser)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.deepPurple[300]
+                          : Colors.deepPurple,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'YOU',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${user.points.toStringAsFixed(0)} points',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  ),
-                ],
-              ),
+              ],
             ),
-
-            if (isCurrentUser)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.deepPurple,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text(
-                  'YOU',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

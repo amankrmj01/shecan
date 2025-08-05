@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../core/services/user_session_service.dart';
-import '../../../data/datasources/leaderboard/leaderboard_datasource.dart';
+import '../../../data/datasources/user/user_datasource.dart';
 
 part 'login_state.dart';
 
@@ -84,12 +84,12 @@ class LoginCubit extends Cubit<LoginState> {
     return null; // No validation errors
   }
 
-  // Authentication method that checks against leaderboard database
+  // Authentication method that checks against user database
   Future<bool> _authenticateUser(String email, String password) async {
     try {
-      // Get leaderboard data which contains all user credentials
-      final dataSource = LocalLeaderboardDataSource();
-      final leaderboardModels = await dataSource.getLeaderboardData();
+      // Get user data which contains all user credentials
+      final dataSource = LocalUserDataSource();
+      final leaderboardModels = await dataSource.getUserData();
 
       // Trim inputs for comparison
       final trimmedEmail = email.trim().toLowerCase();

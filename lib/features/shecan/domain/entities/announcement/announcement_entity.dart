@@ -1,4 +1,4 @@
-import '../../data/models/announcement/announcement_model.dart';
+import '../../../data/models/announcement/announcement_model.dart';
 
 class AnnouncementEntity {
   final String id;

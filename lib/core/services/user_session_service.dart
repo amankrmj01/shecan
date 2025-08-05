@@ -1,4 +1,4 @@
-import '../../features/shecan/data/models/leaderboard/leaderboard_model.dart';
+import '../../features/shecan/data/models/user/user_model.dart';
 
 class UserSessionService {
   static final UserSessionService _instance = UserSessionService._internal();
@@ -7,13 +7,13 @@ class UserSessionService {
 
   UserSessionService._internal();
 
-  LeaderboardModel? _currentUser;
+  UserModel? _currentUser;
 
   // Get current logged-in user
-  LeaderboardModel? get currentUser => _currentUser;
+  UserModel? get currentUser => _currentUser;
 
   // Set current user after login/signup
-  void setCurrentUser(LeaderboardModel user) {
+  void setCurrentUser(UserModel user) {
     _currentUser = user;
   }
 
@@ -42,7 +42,7 @@ class UserSessionService {
   // Update current user's score
   void updateCurrentUserScore(int newScore) {
     if (_currentUser != null) {
-      _currentUser = LeaderboardModel(
+      _currentUser = UserModel(
         name: _currentUser!.name,
         score: newScore,
         email: _currentUser!.email,

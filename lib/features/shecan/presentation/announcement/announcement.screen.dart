@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../data/models/announcement/announcement_model.dart';
-import '../../domain/entities/announcement_entity.dart';
+import '../../domain/entities/announcement/announcement_entity.dart';
 import 'cubit/announcement_cubit.dart';
 import 'cubit/announcement_state.dart';
 
@@ -25,15 +25,12 @@ class _AnnouncementView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: const Text(
           'Announcements',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.white,
         elevation: 1,
-        foregroundColor: Colors.black87,
         actions: [
           BlocBuilder<AnnouncementCubit, AnnouncementState>(
             builder: (context, state) {

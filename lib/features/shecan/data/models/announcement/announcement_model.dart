@@ -56,7 +56,7 @@ class AnnouncementModel {
     switch (iconName) {
       case 'share':
         return Icons.share;
-      case 'leaderboard':
+      case 'user':
         return Icons.leaderboard;
       case 'build':
         return Icons.build;

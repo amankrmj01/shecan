@@ -1,6 +1,6 @@
-import '../../data/models/announcement/announcement_model.dart';
-import '../entities/announcement_entity.dart';
-import '../repositories/announcement/announcement_repository.dart';
+import '../../../data/models/announcement/announcement_model.dart';
+import '../../entities/announcement/announcement_entity.dart';
+import '../../repositories/announcement/announcement_repository.dart';
 
 class GetAnnouncementsUseCase {
   final AnnouncementRepository repository;

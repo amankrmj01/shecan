@@ -1,4 +1,4 @@
-class LeaderboardEntity {
+class UserEntity {
   final String id;
   final String name;
   final String avatar;
@@ -6,7 +6,7 @@ class LeaderboardEntity {
   final String email;
   final String password;
 
-  const LeaderboardEntity({
+  const UserEntity({
     required this.id,
     required this.name,
     required this.avatar,
@@ -18,7 +18,7 @@ class LeaderboardEntity {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is LeaderboardEntity &&
+    return other is UserEntity &&
         other.id == id &&
         other.name == name &&
         other.avatar == avatar &&

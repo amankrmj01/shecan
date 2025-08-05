@@ -1,9 +1,9 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shecan/features/shecan/data/models/announcement/announcement_model.dart';
-import 'package:shecan/features/shecan/domain/usecases/announcement_usecases.dart';
-import 'package:shecan/features/shecan/domain/entities/announcement_entity.dart';
+import 'package:shecan/features/shecan/domain/entities/announcement/announcement_entity.dart';
+import 'package:shecan/features/shecan/domain/usecases/announcement/announcement_usecases.dart';
 import 'package:shecan/features/shecan/presentation/announcement/cubit/announcement_cubit.dart';
 import 'package:shecan/features/shecan/presentation/announcement/cubit/announcement_state.dart';
 

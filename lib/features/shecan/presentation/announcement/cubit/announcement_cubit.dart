@@ -1,7 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../../data/models/announcement/announcement_model.dart';
-import '../../../domain/entities/announcement_entity.dart';
-import '../../../domain/usecases/announcement_usecases.dart';
+import '../../../domain/entities/announcement/announcement_entity.dart';
+import '../../../domain/usecases/announcement/announcement_usecases.dart';
 import 'announcement_state.dart';
 
 class AnnouncementCubit extends Cubit<AnnouncementState> {

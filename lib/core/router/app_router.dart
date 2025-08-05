@@ -32,6 +32,18 @@ class AppRouter {
         name: 'main',
         pageBuilder: (context, state) =>
             _buildPageWithFadeTransition(context, state, const MainScreen()),
+        routes: [
+          GoRoute(
+            path: '/profile',
+            name: 'profile',
+            pageBuilder: (context, state) => _buildPageWithSlideTransition(
+              context,
+              state,
+              const UserProfileScreen(),
+              SlideDirection.right,
+            ),
+          ),
+        ],
       ),
     ],
     errorBuilder: (context, state) =>

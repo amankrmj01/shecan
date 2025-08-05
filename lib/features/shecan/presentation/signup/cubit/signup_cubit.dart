@@ -1,8 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../core/services/user_session_service.dart';
-import '../../../data/datasources/leaderboard/leaderboard_datasource.dart';
-import '../../../data/models/leaderboard/leaderboard_model.dart';
+import '../../../data/datasources/user/user_datasource.dart';
+import '../../../data/models/user/user_model.dart';
 
 part 'signup_state.dart';
 
@@ -128,14 +128,14 @@ class SignupCubit extends Cubit<SignupState> {
     return null; // No validation errors
   }
 
-  // Registration method that adds user to leaderboard database
+  // Registration method that adds user to user database
   Future<bool> _registerUser(
     String fullName,
     String email,
     String password,
   ) async {
     try {
-      final dataSource = LocalLeaderboardDataSource();
+      final dataSource = LocalUserDataSource();
 
       // Check if email already exists in the database
       final emailExists = await dataSource.checkEmailExists(
@@ -146,7 +146,7 @@ class SignupCubit extends Cubit<SignupState> {
       }
 
       // Create new user with score 0
-      final newUser = LeaderboardModel(
+      final newUser = UserModel(
         name: fullName.trim(),
         score: 0, // New users start with 0 score
         email: email.trim().toLowerCase(),

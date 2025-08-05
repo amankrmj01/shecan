@@ -1,11 +1,12 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../domain/entities/leaderboard/leaderboard_entity.dart';
-import '../../../domain/usecases/leaderboard/get_leaderboard_usecase.dart';
+
+import '../../../domain/entities/user/user_entity.dart';
+import '../../../domain/usecases/user/get_user_usecase.dart';
 
 part 'leaderboard_state.dart';
 
 class LeaderboardCubit extends Cubit<LeaderboardState> {
-  final GetLeaderboardUseCase getLeaderboardUseCase;
+  final GetUserUseCase getLeaderboardUseCase;
 
   LeaderboardCubit({required this.getLeaderboardUseCase})
     : super(LeaderboardInitial());

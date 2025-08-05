@@ -1,14 +1,14 @@
-import '../../models/leaderboard/leaderboard_model.dart';
+import '../../models/user/user_model.dart';
 
-abstract class LeaderboardDataSource {
-  Future<List<LeaderboardModel>> getLeaderboardData();
+abstract class UserDataSource {
+  Future<List<UserModel>> getUserData();
 
-  Future<bool> addNewUser(LeaderboardModel newUser);
+  Future<bool> addNewUser(UserModel newUser);
 
   Future<bool> checkEmailExists(String email);
 }
 
-class LocalLeaderboardDataSource implements LeaderboardDataSource {
+class LocalUserDataSource implements UserDataSource {
   static const List<Map<String, dynamic>> _mockData = [
     {
       'name': 'Jessica Lee',
@@ -61,12 +61,10 @@ class LocalLeaderboardDataSource implements LeaderboardDataSource {
   ];
 
   @override
-  Future<List<LeaderboardModel>> getLeaderboardData() async {
+  Future<List<UserModel>> getUserData() async {
     await Future.delayed(const Duration(milliseconds: 800));
 
-    final models = _mockData
-        .map((data) => LeaderboardModel.fromJson(data))
-        .toList();
+    final models = _mockData.map((data) => UserModel.fromJson(data)).toList();
 
     models.sort();
 
@@ -74,7 +72,7 @@ class LocalLeaderboardDataSource implements LeaderboardDataSource {
   }
 
   @override
-  Future<bool> addNewUser(LeaderboardModel newUser) async {
+  Future<bool> addNewUser(UserModel newUser) async {
     await Future.delayed(const Duration(milliseconds: 800));
     _mockData.add({
       'name': newUser.name,

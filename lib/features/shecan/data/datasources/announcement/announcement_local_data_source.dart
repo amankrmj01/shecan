@@ -19,10 +19,10 @@ class AnnouncementLocalDataSource implements AnnouncementDataSource {
       id: '2',
       title: 'Leaderboard Update',
       message:
-          'Weekly leaderboard has been reset. Keep contributing to climb to the top!',
+          'Weekly user has been reset. Keep contributing to climb to the top!',
       createdAt: DateTime.now().subtract(const Duration(days: 1)),
       isNew: false,
-      iconName: 'leaderboard',
+      iconName: 'user',
       colorHex: '#FF9800',
       type: AnnouncementType.update,
       priority: AnnouncementPriority.medium,

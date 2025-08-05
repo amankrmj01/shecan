@@ -4,16 +4,17 @@ import 'package:http/http.dart' as http;
 import '../../features/shecan/data/datasources/announcement/announcement_data_source.dart';
 import '../../features/shecan/data/datasources/announcement/announcement_local_data_source.dart';
 import '../../features/shecan/data/datasources/announcement/announcement_remote_data_source.dart';
-import '../../features/shecan/data/datasources/leaderboard/leaderboard_datasource.dart';
+import '../../features/shecan/data/datasources/user/user_datasource.dart';
 import '../../features/shecan/data/repositories/announcement/announcement_repository_impl.dart';
-import '../../features/shecan/data/repositories/leaderboard/leaderboard_repository.dart';
+import '../../features/shecan/data/repositories/user/user_repository.dart';
 import '../../features/shecan/domain/repositories/announcement/announcement_repository.dart';
-import '../../features/shecan/domain/repositories/leaderboard/leaderboard_repository.dart';
-import '../../features/shecan/domain/usecases/announcement_usecases.dart';
-import '../../features/shecan/domain/usecases/leaderboard/get_leaderboard_usecase.dart';
+import '../../features/shecan/domain/repositories/user/user_repository.dart';
+import '../../features/shecan/domain/usecases/announcement/announcement_usecases.dart';
+import '../../features/shecan/domain/usecases/user/get_user_usecase.dart';
 import '../../features/shecan/presentation/announcement/cubit/announcement_cubit.dart';
 import '../../features/shecan/presentation/leaderboard/cubit/leaderboard_cubit.dart';
 import '../../features/shecan/services/announcement_service.dart';
+import '../services/theme_service.dart';
 import '../services/user_session_service.dart';
 
 final GetIt sl = GetIt.instance;
@@ -38,9 +39,7 @@ class DependencyInjection {
     //   instanceName: 'remote',
     // );
 
-    sl.registerLazySingleton<LeaderboardDataSource>(
-      () => LocalLeaderboardDataSource(),
-    );
+    sl.registerLazySingleton<UserDataSource>(() => LocalUserDataSource());
 
     // Repository
     sl.registerLazySingleton<AnnouncementRepository>(
@@ -50,12 +49,13 @@ class DependencyInjection {
       ),
     );
 
-    sl.registerLazySingleton<LeaderboardRepository>(
-      () => LeaderboardRepositoryImpl(dataSource: sl()),
+    sl.registerLazySingleton<UserRepository>(
+      () => UserRepositoryImpl(dataSource: sl()),
     );
 
     // Services
     sl.registerLazySingleton<UserSessionService>(() => UserSessionService());
+    sl.registerLazySingleton<ThemeService>(() => ThemeService());
 
     sl.registerLazySingleton<AnnouncementService>(
       () => AnnouncementService(sl<AnnouncementRepository>()),
@@ -95,8 +95,8 @@ class DependencyInjection {
     );
 
     // Use cases for Leaderboard
-    sl.registerLazySingleton<GetLeaderboardUseCase>(
-      () => GetLeaderboardUseCase(repository: sl()),
+    sl.registerLazySingleton<GetUserUseCase>(
+      () => GetUserUseCase(repository: sl()),
     );
 
     // Cubits

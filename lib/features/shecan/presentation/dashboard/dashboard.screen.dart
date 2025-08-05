@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -57,15 +58,44 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: const Text(
           'Dashboard',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.white,
         elevation: 1,
-        foregroundColor: Colors.black87,
+        actions: [
+          IconButton(
+            icon: CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.deepPurple,
+              child: ClipOval(
+                child: Image.network(
+                  'https://api.dicebear.com/9.x/initials/png?seed=${Uri.encodeComponent(userSession.currentUserName)}&size=64',
+                  width: 32,
+                  height: 32,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Icon(Icons.person, color: Colors.white, size: 20);
+                  },
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            onPressed: () => _showUserMenu(context),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
@@ -630,6 +660,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         );
       }
     }
+  }
+
+  void _showUserMenu(BuildContext context) {
+    context.goNamed('profile');
   }
 
   void _showRewardSnackbar(String label, bool unlocked) {

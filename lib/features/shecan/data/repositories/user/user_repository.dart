@@ -1,24 +1,24 @@
-import '../../../domain/entities/leaderboard/leaderboard_entity.dart';
-import '../../../domain/repositories/leaderboard/leaderboard_repository.dart';
-import '../../datasources/leaderboard/leaderboard_datasource.dart';
+import '../../../domain/entities/user/user_entity.dart';
+import '../../../domain/repositories/user/user_repository.dart';
+import '../../datasources/user/user_datasource.dart';
 
-class LeaderboardRepositoryImpl implements LeaderboardRepository {
-  final LeaderboardDataSource dataSource;
+class UserRepositoryImpl implements UserRepository {
+  final UserDataSource dataSource;
 
-  LeaderboardRepositoryImpl({required this.dataSource});
+  UserRepositoryImpl({required this.dataSource});
 
   @override
-  Future<List<LeaderboardEntity>> getLeaderboardData() async {
+  Future<List<UserEntity>> getUserData() async {
     try {
-      final models = await dataSource.getLeaderboardData();
+      final models = await dataSource.getUserData();
       return models.map((model) => model.toEntity()).toList();
     } catch (e) {
-      throw Exception('Failed to fetch leaderboard data: $e');
+      throw Exception('Failed to fetch user data: $e');
     }
   }
 
   @override
-  Future<LeaderboardEntity?> getCurrentUserRank() async {
+  Future<UserEntity?> getCurrentUserRank() async {
     try {
       // Since we removed isCurrentUser, we'll need to implement different logic
       // For now, returning null as this method will need custom implementation

@@ -1,20 +1,20 @@
-import '../../../domain/entities/leaderboard/leaderboard_entity.dart';
+import '../../../domain/entities/user/user_entity.dart';
 
-class LeaderboardModel implements Comparable<LeaderboardModel> {
+class UserModel implements Comparable<UserModel> {
   final String name;
   final int score;
   final String email;
   final String password;
 
-  const LeaderboardModel({
+  const UserModel({
     required this.name,
     required this.score,
     required this.email,
     required this.password,
   });
 
-  LeaderboardEntity toEntity() {
-    return LeaderboardEntity(
+  UserEntity toEntity() {
+    return UserEntity(
       id: name.toLowerCase().replaceAll(' ', '_'),
       // Use name as unique ID
       name: name,
@@ -25,8 +25,8 @@ class LeaderboardModel implements Comparable<LeaderboardModel> {
     );
   }
 
-  factory LeaderboardModel.fromJson(Map<String, dynamic> json) {
-    return LeaderboardModel(
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    return UserModel(
       name: json['name'] as String,
       score: json['score'] as int,
       email: json['email'] as String,
@@ -40,7 +40,7 @@ class LeaderboardModel implements Comparable<LeaderboardModel> {
 
   // Compare function for automatic sorting by score (highest first)
   @override
-  int compareTo(LeaderboardModel other) {
+  int compareTo(UserModel other) {
     // Sort by score in descending order (highest score first)
     int scoreComparison = other.score.compareTo(score);
 
@@ -53,14 +53,14 @@ class LeaderboardModel implements Comparable<LeaderboardModel> {
   }
 
   // Helper method to get rank based on position in sorted list
-  int getRankInList(List<LeaderboardModel> sortedList) {
+  int getRankInList(List<UserModel> sortedList) {
     return sortedList.indexOf(this) + 1;
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is LeaderboardModel &&
+    return other is UserModel &&
         other.name == name &&
         other.score == score &&
         other.email == email &&
@@ -74,6 +74,6 @@ class LeaderboardModel implements Comparable<LeaderboardModel> {
 
   @override
   String toString() {
-    return 'LeaderboardModel(name: $name, score: $score, email: $email)';
+    return 'UserModel(name: $name, score: $score, email: $email)';
   }
 }
