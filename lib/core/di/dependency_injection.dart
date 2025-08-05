@@ -13,6 +13,8 @@ import '../../features/shecan/domain/usecases/announcement/announcement_usecases
 import '../../features/shecan/domain/usecases/user/get_user_usecase.dart';
 import '../../features/shecan/presentation/announcement/cubit/announcement_cubit.dart';
 import '../../features/shecan/presentation/leaderboard/cubit/leaderboard_cubit.dart';
+import '../../features/shecan/presentation/profile/cubit/user_profile_cubit.dart';
+import '../../features/shecan/presentation/signup/cubit/signup_cubit.dart';
 import '../../features/shecan/services/announcement_service.dart';
 import '../services/theme_service.dart';
 import '../services/user_session_service.dart';
@@ -115,6 +117,12 @@ class DependencyInjection {
 
     sl.registerFactory<LeaderboardCubit>(
       () => LeaderboardCubit(getLeaderboardUseCase: sl()),
+    );
+
+    sl.registerFactory<SignupCubit>(() => SignupCubit(userDataSource: sl()));
+
+    sl.registerFactory<UserProfileCubit>(
+      () => UserProfileCubit(userSessionService: sl(), themeService: sl()),
     );
   }
 }

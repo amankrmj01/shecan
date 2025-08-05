@@ -17,6 +17,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  static final RegExp _emailRegex = RegExp(
+    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+  );
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -141,20 +145,38 @@ class _LoginScreenState extends State<LoginScreen> {
                           key: _formKey,
                           child: Column(
                             children: [
-                              _buildTextField(
+                              _buildTextFormField(
                                 controller: _emailController,
                                 label: 'Email Address',
                                 icon: Icons.email_outlined,
                                 keyboardType: TextInputType.emailAddress,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Please enter your email address';
+                                  }
+                                  if (!_emailRegex.hasMatch(value.trim())) {
+                                    return 'Please enter a valid email address';
+                                  }
+                                  return null;
+                                },
                               ),
                               const SizedBox(height: 20),
 
-                              _buildTextField(
+                              _buildTextFormField(
                                 controller: _passwordController,
                                 label: 'Password',
                                 icon: Icons.lock_outline,
                                 obscureText: true,
                                 keyboardType: TextInputType.visiblePassword,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Please enter your password';
+                                  }
+                                  if (value.trim().length < 8) {
+                                    return 'Password must be at least 8 characters long';
+                                  }
+                                  return null;
+                                },
                               ),
                             ],
                           ),
@@ -230,52 +252,30 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleLogin(BuildContext context) {
-    // Validate form before proceeding
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    // Clear any previous errors
-    context.read<LoginCubit>().clearError();
-
-    // Get trimmed values
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    // Additional client-side validation
-    final cubit = context.read<LoginCubit>();
-    if (!cubit.isValidEmail(email)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.error, color: Colors.white, size: 20),
-              const SizedBox(width: 8),
-              const Text('Please enter a valid email address'),
-            ],
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    // Perform login
-    cubit.login(email: email, password: password);
+    context.read<LoginCubit>().login(email: email, password: password);
   }
 
-  Widget _buildTextField({
+  Widget _buildTextFormField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
-    required keyboardType,
+    required TextInputType keyboardType,
     bool obscureText = false,
+    String? Function(String?)? validator,
   }) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
+      validator: validator,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: Colors.deepPurple[200]),

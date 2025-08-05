@@ -9,7 +9,7 @@ abstract class UserDataSource {
 }
 
 class LocalUserDataSource implements UserDataSource {
-  static const List<Map<String, dynamic>> _mockData = [
+  static final List<Map<String, dynamic>> _mockData = [
     {
       'name': 'Jessica Lee',
       'score': 15200,
@@ -74,6 +74,17 @@ class LocalUserDataSource implements UserDataSource {
   @override
   Future<bool> addNewUser(UserModel newUser) async {
     await Future.delayed(const Duration(milliseconds: 800));
+
+    final emailExists = _mockData.any(
+      (user) =>
+          user['email']?.toString().toLowerCase() ==
+          newUser.email.toLowerCase(),
+    );
+
+    if (emailExists) {
+      return false;
+    }
+
     _mockData.add({
       'name': newUser.name,
       'score': newUser.score,
@@ -86,6 +97,8 @@ class LocalUserDataSource implements UserDataSource {
   @override
   Future<bool> checkEmailExists(String email) async {
     await Future.delayed(const Duration(milliseconds: 800));
-    return _mockData.any((user) => user['email'] == email);
+    return _mockData.any(
+      (user) => user['email']?.toString().toLowerCase() == email.toLowerCase(),
+    );
   }
 }

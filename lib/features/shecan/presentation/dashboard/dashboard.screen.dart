@@ -1,59 +1,40 @@
+// lib/features/dashboard/presentation/screens/dashboard_screen.dart
+
 import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../../../core/di/dependency_injection.dart';
-import '../../../../core/services/user_session_service.dart';
+import 'cubit/dashboard_cubit.dart';
 
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => DashboardCubit()..loadDashboardData(),
+      child: const DashboardView(),
+    );
+  }
 }
 
-class _DashboardScreenState extends State<DashboardScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _donationController;
-  late Animation<double> _donationAnimation;
-  late final int targetDonationAmount;
+class DashboardView extends StatefulWidget {
+  const DashboardView({super.key});
+
+  @override
+  State<DashboardView> createState() => _DashboardViewState();
+}
+
+class _DashboardViewState extends State<DashboardView> {
   final GlobalKey _qrKey = GlobalKey();
-
-  final userSession = sl<UserSessionService>();
-
-  @override
-  void initState() {
-    super.initState();
-    targetDonationAmount = userSession.currentUserScore;
-    _donationController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    );
-
-    // Create the animation that goes from 1 to target amount
-    _donationAnimation =
-        Tween<double>(begin: 1.0, end: targetDonationAmount.toDouble()).animate(
-          CurvedAnimation(parent: _donationController, curve: Curves.easeInOut),
-        );
-
-    // Start the animation when the screen appears
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _donationController.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _donationController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,60 +46,87 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
         elevation: 1,
         actions: [
-          IconButton(
-            icon: CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.deepPurple,
-              child: ClipOval(
-                child: Image.network(
-                  'https://api.dicebear.com/9.x/initials/png?seed=${Uri.encodeComponent(userSession.currentUserName)}&size=64',
-                  width: 32,
-                  height: 32,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Icon(Icons.person, color: Colors.white, size: 20);
-                  },
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          BlocBuilder<DashboardCubit, DashboardState>(
+            builder: (context, state) {
+              if (state is DashboardLoaded) {
+                return IconButton(
+                  icon: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: Colors.deepPurple,
+                    child: ClipOval(
+                      child: Image.network(
+                        state.userAvatarUrl,
+                        width: 32,
+                        height: 32,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.person,
+                            color: Colors.white,
+                            size: 20,
+                          );
+                        },
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
-              ),
-            ),
-            onPressed: () => _showUserMenu(context),
+                    ),
+                  ),
+                  onPressed: () => _showUserMenu(context),
+                );
+              }
+              return const SizedBox.shrink();
+            },
           ),
           const SizedBox(width: 8),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          // Welcome Card
-          _buildWelcomeCard(),
-          const SizedBox(height: 20),
-          // Stats Grid
-          _buildStatsGrid(),
-          const SizedBox(height: 20),
-          // Rewards Section
-          _buildRewardsSection(),
-          const SizedBox(height: 20),
-          // Share Referral Section
-          _buildShareReferralSection(),
-        ],
+      body: BlocBuilder<DashboardCubit, DashboardState>(
+        builder: (context, state) {
+          if (state is DashboardError) {
+            return Center(child: Text('Error: ${state.message}'));
+          }
+
+          if (state is DashboardLoading || state is DashboardInitial) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state is DashboardLoaded) {
+            return ListView(
+              padding: const EdgeInsets.all(16.0),
+              children: [
+                _buildWelcomeCard(state.userName),
+                const SizedBox(height: 20),
+                _buildStatsGrid(state.referralCode, state.userScore),
+                const SizedBox(height: 20),
+                _buildRewardsSection(),
+                const SizedBox(height: 20),
+                _buildShareReferralSection(
+                  context,
+                  state.userName,
+                  state.referralCode,
+                ),
+              ],
+            );
+          }
+
+          return const SizedBox.shrink();
+        },
       ),
     );
   }
 
-  Widget _buildWelcomeCard() {
-    final userName = userSession.currentUserName;
-
+  Widget _buildWelcomeCard(String userName) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 4,
@@ -147,7 +155,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildStatsGrid() {
+  Widget _buildStatsGrid(String referralCode, int donationAmount) {
     return GridView.count(
       crossAxisCount: 2,
       crossAxisSpacing: 16,
@@ -157,12 +165,12 @@ class _DashboardScreenState extends State<DashboardScreen>
       children: [
         _buildStatCard(
           title: 'Referral Code',
-          value:
-              '${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025',
+          value: referralCode,
           icon: Icons.qr_code_2_rounded,
           color: Colors.orangeAccent,
+          onTap: () => _showQRCodeDialog(context, 'SheCan User', referralCode),
         ),
-        _buildAnimatedDonationCard(),
+        _AnimatedDonationCard(donationAmount: donationAmount),
       ],
     );
   }
@@ -172,9 +180,10 @@ class _DashboardScreenState extends State<DashboardScreen>
     required String value,
     required IconData icon,
     required Color color,
+    required VoidCallback onTap,
   }) {
     return InkWell(
-      onTap: _showQRCodeDialog,
+      onTap: onTap,
       child: Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 2,
@@ -213,57 +222,6 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAnimatedDonationCard() {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.teal.withAlpha((0.15 * 255).toInt()),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.volunteer_activism_rounded,
-                color: Colors.teal,
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Donations Raised',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 8),
-            AnimatedBuilder(
-              animation: _donationAnimation,
-              builder: (context, child) {
-                return Text(
-                  '₹${_donationAnimation.value.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                );
-              },
-            ),
-          ],
         ),
       ),
     );
@@ -353,7 +311,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildShareReferralSection() {
+  Widget _buildShareReferralSection(
+    BuildContext context,
+    String userName,
+    String referralCode,
+  ) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 2,
@@ -386,7 +348,8 @@ class _DashboardScreenState extends State<DashboardScreen>
               children: [
                 Expanded(
                   child: InkWell(
-                    onTap: () => _showQRCodeDialog(),
+                    onTap: () =>
+                        _showQRCodeDialog(context, userName, referralCode),
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -408,8 +371,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                           const SizedBox(width: 8),
                           Flexible(
                             child: Text(
-                              '${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025',
-                              style: TextStyle(
+                              referralCode,
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 letterSpacing: 1.2,
@@ -425,7 +388,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
-                  onPressed: () => _shareReferralCode(),
+                  onPressed: () => _shareReferralCode(referralCode),
                   icon: const Icon(Icons.share, size: 20),
                   label: const Text('Share'),
                   style: ElevatedButton.styleFrom(
@@ -448,131 +411,123 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  void _shareReferralCode() {
-    String referralCode =
-        '${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025';
-    final String shareText =
+  void _shareReferralCode(String referralCode) {
+    const String shareText =
         '🎉 Join me on Shecan and start making a difference! '
-        'Use my referral code: $referralCode '
+        'Use my referral code: %s '
         'to get started. Together we can create positive impact! '
         '\n\nDownload the app now and let\'s change the world together! 💪';
 
     SharePlus.instance.share(
       ShareParams(
-        text: shareText,
+        text: shareText.replaceFirst('%s', referralCode),
         subject: 'Join me on Shecan - Referral Code: $referralCode',
       ),
     );
   }
 
-  void _showQRCodeDialog() {
+  void _showQRCodeDialog(
+    BuildContext context,
+    String userName,
+    String referralCode,
+  ) {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 300),
-      pageBuilder:
-          (
-            BuildContext buildContext,
-            Animation animation,
-            Animation secondaryAnimation,
-          ) {
-            return Center(
-              child: Material(
-                type: MaterialType.transparency,
-                child: Container(
-                  width: MediaQuery.of(context).size.width * 0.85,
-                  padding: const EdgeInsets.all(24.0),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
+      pageBuilder: (ctx, animation, secondaryAnimation) {
+        return Center(
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.85,
+              padding: const EdgeInsets.all(24.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(25),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'Scan to join the team and spreading happiness',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.grey[300]!,
-                            width: 1,
-                          ),
-                        ),
-                        child: RepaintBoundary(
-                          key: _qrKey,
-                          child: Container(
-                            color: Colors.white,
-                            padding: const EdgeInsets.all(10),
-                            child: QrImageView(
-                              data:
-                                  'https://shecan.app/referral/${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025',
-                              version: QrVersions.auto,
-                              size: 200.0,
-                              gapless: true,
-                              backgroundColor: Colors.white,
-                              eyeStyle: const QrEyeStyle(
-                                eyeShape: QrEyeShape.square,
-                                color: Colors.black,
-                              ),
-                              dataModuleStyle: const QrDataModuleStyle(
-                                dataModuleShape: QrDataModuleShape.square,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            _shareQRCode();
-                          },
-                          icon: const Icon(Icons.share, size: 20),
-                          label: const Text('Share this QR code'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue[600],
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 16,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 2,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                ],
               ),
-            );
-          },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Scan to join the team and spreading happiness',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[300]!, width: 1),
+                    ),
+                    child: RepaintBoundary(
+                      key: _qrKey,
+                      child: Container(
+                        color: Colors.white,
+                        padding: const EdgeInsets.all(10),
+                        child: QrImageView(
+                          data: 'https://shecan.app/referral/$referralCode',
+                          version: QrVersions.auto,
+                          size: 200.0,
+                          gapless: true,
+                          backgroundColor: Colors.white,
+                          eyeStyle: const QrEyeStyle(
+                            eyeShape: QrEyeShape.square,
+                            color: Colors.black,
+                          ),
+                          dataModuleStyle: const QrDataModuleStyle(
+                            dataModuleShape: QrDataModuleShape.square,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        _shareQRCode(userName, referralCode);
+                      },
+                      icon: const Icon(Icons.share, size: 20),
+                      label: const Text('Share this QR code'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue[600],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         return ScaleTransition(
           scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
@@ -582,9 +537,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Future<void> _shareQRCode() async {
+  Future<void> _shareQRCode(String userName, String referralCode) async {
     try {
-      // Show loading indicator
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Preparing QR code for sharing...'),
@@ -592,7 +546,6 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
       );
 
-      // Capture the QR code as image
       RenderRepaintBoundary boundary =
           _qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage(pixelRatio: 3.0);
@@ -601,20 +554,15 @@ class _DashboardScreenState extends State<DashboardScreen>
       );
 
       if (byteData != null) {
-        Uint8List pngBytes = byteData.buffer.asUint8List();
-
-        // Get temporary directory
+        final Uint8List pngBytes = byteData.buffer.asUint8List();
         final Directory tempDir = await getTemporaryDirectory();
         final String fileName =
-            'qr_code_${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025_${DateTime.now().millisecondsSinceEpoch}.png';
+            'qr_code_${referralCode}_${DateTime.now().millisecondsSinceEpoch}.png';
         final File file = await File(
           '${tempDir.path}/$fileName',
         ).writeAsBytes(pngBytes);
 
-        String referralCode =
-            '${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025';
-        String appUrl =
-            'https://shecan.app/referral/${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025';
+        final String appUrl = 'https://shecan.app/referral/$referralCode';
         final String shareText =
             '🎉 Scan to join the team and spreading happiness!\n\n'
             'Use my referral code: $referralCode\n'
@@ -622,7 +570,6 @@ class _DashboardScreenState extends State<DashboardScreen>
             'Together we can create positive impact!\n'
             'Download the Shecan app and let\'s change the world together! 💪';
 
-        // Share the image file along with text
         await SharePlus.instance.share(
           ShareParams(
             files: [XFile(file.path)],
@@ -632,11 +579,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         );
       }
     } catch (e) {
-      // Fallback to text-only sharing if image capture fails
-      String referralCode =
-          '${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025';
-      String appUrl =
-          'https://shecan.app/referral/${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025';
+      final String appUrl = 'https://shecan.app/referral/$referralCode';
       final String shareText =
           '🎉 Scan to join the team and spreading happiness!\n\n'
           'Use my referral code: $referralCode\n'
@@ -668,77 +611,63 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   void _showRewardSnackbar(String label, bool unlocked) {
     String message;
-
-    // Define custom messages and tasks for each reward
     switch (label) {
       case 'Top Performer':
         message = unlocked
-            ? 'You have earned this reward!\nThis reward is for being a top performer in donations and referrals.'
-            : 'Complete this task to achieve this reward:\nReach ₹15,000 in total donations and refer 10+ friends.';
+            ? 'You earned this for being a top performer in donations and referrals.'
+            : 'Reach ₹15,000 in donations and refer 10+ friends to unlock.';
         break;
       case '₹10k Club':
         message = unlocked
-            ? 'You have earned this reward!\nThis reward is for raising over ₹10,000 in donations.'
-            : 'Complete this task to achieve this reward:\nRaise ₹10,000 or more in total donations.';
+            ? 'You earned this for raising over ₹10,000 in donations.'
+            : 'Raise ₹10,000 or more in total donations to unlock.';
         break;
       case 'Streak Master':
         message = unlocked
-            ? 'You have earned this reward!\nThis reward is for maintaining daily activity streaks.'
-            : 'Complete this task to achieve this reward:\nMaintain a 30-day daily login and activity streak.';
+            ? 'You earned this for maintaining daily activity streaks.'
+            : 'Maintain a 30-day daily login and activity streak to unlock.';
         break;
       case 'Team Player':
         message = unlocked
-            ? 'You have earned this reward!\nThis reward is for excellent teamwork and collaboration.'
-            : 'Complete this task to achieve this reward:\nSuccessfully collaborate on 5 team projects.';
+            ? 'You earned this for excellent teamwork and collaboration.'
+            : 'Successfully collaborate on 5 team projects to unlock.';
         break;
       default:
         message = unlocked
-            ? 'You have earned this reward!\nThis reward is for your outstanding contribution.'
-            : 'Complete this task to achieve this reward:\nKeep working towards your goals!';
+            ? 'You have earned this reward for your outstanding contribution.'
+            : 'Keep working towards your goals to unlock!';
     }
 
-    // Add haptic feedback
     HapticFeedback.lightImpact();
-
-    // Show simple SnackBar with bottom animation
     ScaffoldMessenger.of(context).clearSnackBars();
-
     ScaffoldMessenger.of(context).showSnackBar(
       snackBarAnimationStyle: AnimationStyle(
         curve: Curves.elasticOut,
-        duration: Duration(milliseconds: 800),
+        duration: const Duration(milliseconds: 800),
         reverseCurve: Curves.easeInBack,
-        reverseDuration: Duration(milliseconds: 300),
+        reverseDuration: const Duration(milliseconds: 300),
       ),
       SnackBar(
-        content: AnimatedContainer(
-          duration: Duration(milliseconds: 500),
-          curve: Curves.easeOutBack,
-          child: Row(
-            children: [
-              AnimatedContainer(
-                duration: Duration(milliseconds: 300),
-                margin: EdgeInsets.only(right: 12),
-                child: Icon(
-                  unlocked ? Icons.check_circle : Icons.info_outline,
+        content: Row(
+          children: [
+            Icon(
+              unlocked ? Icons.check_circle : Icons.info_outline,
+              color: Colors.white,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
                   color: Colors.white,
-                  size: 24,
+                  height: 1.4,
                 ),
               ),
-              Expanded(
-                child: Text(
-                  message,
-                  textAlign: TextAlign.left,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
         backgroundColor: unlocked ? Colors.green[600] : Colors.orange[600],
         duration: const Duration(seconds: 5),
@@ -746,7 +675,95 @@ class _DashboardScreenState extends State<DashboardScreen>
         dismissDirection: DismissDirection.horizontal,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 8,
-        margin: EdgeInsets.all(16),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+}
+
+// Separate StatefulWidget for the animated card to manage its own state.
+class _AnimatedDonationCard extends StatefulWidget {
+  final int donationAmount;
+
+  const _AnimatedDonationCard({required this.donationAmount});
+
+  @override
+  _AnimatedDonationCardState createState() => _AnimatedDonationCardState();
+}
+
+class _AnimatedDonationCardState extends State<_AnimatedDonationCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    );
+    _animation = Tween<double>(
+      begin: 1.0,
+      end: widget.donationAmount.toDouble(),
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.teal.withAlpha((0.15 * 255).toInt()),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.volunteer_activism_rounded,
+                color: Colors.teal,
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Donations Raised',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 8),
+            AnimatedBuilder(
+              animation: _animation,
+              builder: (context, child) {
+                return Text(
+                  '₹${_animation.value.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

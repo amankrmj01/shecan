@@ -1,25 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/services/theme_service.dart';
-import '../../../../core/services/user_session_service.dart';
+import 'cubit/user_profile_cubit.dart';
 
-class UserProfileScreen extends StatefulWidget {
+class UserProfileScreen extends StatelessWidget {
   const UserProfileScreen({super.key});
 
   @override
-  State<UserProfileScreen> createState() => _UserProfileScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => sl<UserProfileCubit>()..loadUserProfile(),
+      child: const _UserProfileView(),
+    );
+  }
 }
 
-class _UserProfileScreenState extends State<UserProfileScreen> {
-  bool _notificationsEnabled = true;
+class _UserProfileView extends StatelessWidget {
+  const _UserProfileView();
 
   @override
   Widget build(BuildContext context) {
-    final userSession = sl<UserSessionService>();
-    final themeService = Provider.of<ThemeService>(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -28,225 +31,295 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         ),
         elevation: 1,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // User Profile Card
-            Card(
-              shape: RoundedRectangleBorder(
+      body: BlocConsumer<UserProfileCubit, UserProfileState>(
+        listener: (context, state) {
+          if (state is UserProfileError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
+            );
+          } else if (state is UserProfileLoggedOut) {
+            context.goNamed('login');
+          }
+        },
+        builder: (context, state) {
+          if (state is UserProfileLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state is UserProfileError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(state.message),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () =>
+                        context.read<UserProfileCubit>().loadUserProfile(),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          if (state is UserProfileLoaded) {
+            return _UserProfileContent(state: state);
+          }
+
+          return const SizedBox.shrink();
+        },
+      ),
+    );
+  }
+}
+
+class _UserProfileContent extends StatelessWidget {
+  final UserProfileLoaded state;
+
+  const _UserProfileContent({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    final cubit = context.read<UserProfileCubit>();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          // User Profile Card
+          Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 2,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.deepPurple, Colors.deepPurple[300]!],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(16),
               ),
-              elevation: 2,
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.deepPurple, Colors.deepPurple[300]!],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  children: [
-                    // User Avatar
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Colors.white,
-                      child: ClipOval(
-                        child: Image.network(
-                          'https://api.dicebear.com/9.x/initials/png?seed=${Uri.encodeComponent(userSession.currentUserName)}&size=400',
-                          width: 90,
-                          height: 90,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Icons.person,
-                              color: Colors.white,
-                              size: 20,
-                            );
-                          },
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
+              child: Column(
+                children: [
+                  // User Avatar
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.white,
+                    child: ClipOval(
+                      child: Image.network(
+                        'https://api.dicebear.com/9.x/initials/png?seed=${Uri.encodeComponent(state.user.name)}&size=400',
+                        width: 90,
+                        height: 90,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.person,
+                            color: Colors.white,
+                            size: 20,
+                          );
+                        },
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
                               ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // User Name
-                    Text(
-                      userSession.currentUserName,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // User Email
-                    Text(
-                      userSession.currentUserEmail,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Points Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.stars, color: Colors.deepPurple, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${userSession.currentUserScore} Points',
-                            style: TextStyle(
-                              color: Colors.deepPurple,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
                             ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Settings Section
-            Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Settings',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Theme Setting
-                    _buildSettingTile(
-                      icon: Icons.palette_outlined,
-                      title: 'Theme',
-                      subtitle: themeService.themeModeString,
-                      onTap: () => _showThemeDialog(),
-                    ),
-
-                    const Divider(),
-
-                    // Notifications Setting
-                    _buildSettingTile(
-                      icon: Icons.notifications_outlined,
-                      title: 'Notifications',
-                      subtitle: _notificationsEnabled ? 'Enabled' : 'Disabled',
-                      onTap: () => _toggleNotifications(),
-                      trailing: Switch(
-                        value: _notificationsEnabled,
-                        onChanged: (value) => _toggleNotifications(),
-                        activeColor: Colors.deepPurple,
-                      ),
-                    ),
-
-                    const Divider(),
-
-                    // Privacy Setting
-                    _buildSettingTile(
-                      icon: Icons.privacy_tip_outlined,
-                      title: 'Privacy',
-                      subtitle: 'Manage your privacy settings',
-                      onTap: () => _showPrivacySettings(),
-                    ),
-
-                    const Divider(),
-
-                    // Help & Support
-                    _buildSettingTile(
-                      icon: Icons.help_outline,
-                      title: 'Help & Support',
-                      subtitle: 'Get help and contact support',
-                      onTap: () => _showHelpSupport(),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Logout Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _handleLogout(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red[600],
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
                   ),
-                  elevation: 2,
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.logout, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'Logout',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  const SizedBox(height: 16),
+
+                  // User Name
+                  Text(
+                    state.user.name,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // User Email
+                  Text(
+                    state.user.email,
+                    style: const TextStyle(fontSize: 16, color: Colors.white70),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Points Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.stars,
+                          color: Colors.deepPurple,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${state.user.score} Points',
+                          style: const TextStyle(
+                            color: Colors.deepPurple,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
+          ),
 
-            const SizedBox(height: 20),
-          ],
-        ),
+          const SizedBox(height: 24),
+
+          // Settings Section
+          Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Settings',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Theme Setting
+                  _buildSettingTile(
+                    context,
+                    icon: Icons.palette_outlined,
+                    title: 'Theme',
+                    subtitle: _getThemeModeString(state.themeMode),
+                    onTap: () => _showThemeDialog(context, cubit),
+                  ),
+
+                  const Divider(),
+
+                  // Notifications Setting
+                  _buildSettingTile(
+                    context,
+                    icon: Icons.notifications_outlined,
+                    title: 'Notifications',
+                    subtitle: state.notificationsEnabled
+                        ? 'Enabled'
+                        : 'Disabled',
+                    onTap: () => _toggleNotifications(context, cubit),
+                    trailing: Switch(
+                      value: state.notificationsEnabled,
+                      onChanged: (value) =>
+                          _toggleNotifications(context, cubit),
+                      activeColor: Colors.deepPurple,
+                    ),
+                  ),
+
+                  const Divider(),
+
+                  // Privacy Setting
+                  _buildSettingTile(
+                    context,
+                    icon: Icons.privacy_tip_outlined,
+                    title: 'Privacy',
+                    subtitle: 'Manage your privacy settings',
+                    onTap: () => _showPrivacySettings(context),
+                  ),
+
+                  const Divider(),
+
+                  // Help & Support
+                  _buildSettingTile(
+                    context,
+                    icon: Icons.help_outline,
+                    title: 'Help & Support',
+                    subtitle: 'Get help and contact support',
+                    onTap: () => _showHelpSupport(context),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Logout Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => _handleLogout(context, cubit),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[600],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 2,
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.logout, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Logout',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+        ],
       ),
     );
   }
 
-  Widget _buildSettingTile({
+  String _getThemeModeString(AppThemeMode mode) {
+    switch (mode) {
+      case AppThemeMode.light:
+        return 'Light Mode';
+      case AppThemeMode.dark:
+        return 'Dark Mode';
+      case AppThemeMode.system:
+        return 'System Mode';
+    }
+  }
+
+  Widget _buildSettingTile(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
@@ -276,12 +349,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  void _showThemeDialog() {
-    final themeService = Provider.of<ThemeService>(context, listen: false);
-
+  void _showThemeDialog(BuildContext context, UserProfileCubit cubit) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           'Choose Theme',
@@ -291,28 +362,31 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildThemeOption(
+              context,
+              cubit,
               'Light Mode',
               Icons.light_mode,
               AppThemeMode.light,
-              themeService,
             ),
             _buildThemeOption(
+              context,
+              cubit,
               'Dark Mode',
               Icons.dark_mode,
               AppThemeMode.dark,
-              themeService,
             ),
             _buildThemeOption(
+              context,
+              cubit,
               'System Mode',
               Icons.settings,
               AppThemeMode.system,
-              themeService,
             ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
         ],
@@ -321,12 +395,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildThemeOption(
+    BuildContext context,
+    UserProfileCubit cubit,
     String title,
     IconData icon,
     AppThemeMode mode,
-    ThemeService themeService,
   ) {
-    final isSelected = themeService.themeMode == mode;
+    final isSelected = (cubit.state as UserProfileLoaded).themeMode == mode;
 
     return ListTile(
       leading: Icon(icon, color: isSelected ? Colors.deepPurple : Colors.grey),
@@ -335,7 +410,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ? const Icon(Icons.check, color: Colors.deepPurple)
           : null,
       onTap: () {
-        themeService.setThemeMode(mode);
+        cubit.updateTheme(mode);
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -347,15 +422,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  void _toggleNotifications() {
-    setState(() {
-      _notificationsEnabled = !_notificationsEnabled;
-    });
-
+  void _toggleNotifications(BuildContext context, UserProfileCubit cubit) {
+    cubit.toggleNotifications();
+    final newState = cubit.state as UserProfileLoaded;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          _notificationsEnabled
+          newState.notificationsEnabled
               ? 'Notifications enabled'
               : 'Notifications disabled',
         ),
@@ -364,7 +437,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  void _showPrivacySettings() {
+  void _showPrivacySettings(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Privacy settings - Coming soon!'),
@@ -373,7 +446,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  void _showHelpSupport() {
+  void _showHelpSupport(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Help & Support - Coming soon!'),
@@ -382,10 +455,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  void _handleLogout() {
+  void _handleLogout(BuildContext context, UserProfileCubit cubit) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           'Logout',
@@ -397,19 +470,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
-              // Clear user session
-              sl<UserSessionService>().clearCurrentUser();
-
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Go back to dashboard
-
-              // Navigate to login screen
-              // You'll need to implement this based on your routing setup
+              cubit.logout();
+              Navigator.pop(dialogContext); // Close dialog
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Logged out successfully'),
