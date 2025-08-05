@@ -53,11 +53,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                state.message,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 16,
+                              Expanded(
+                                child: Text(
+                                  state.message,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 16,
+                                  ),
+                                  overflow: TextOverflow.visible,
+                                  softWrap: true,
                                 ),
                               ),
                             ],
@@ -85,11 +89,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                state.error,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 16,
+                              Expanded(
+                                child: Text(
+                                  state.error,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 16,
+                                  ),
+                                  softWrap: true,
+                                  overflow: TextOverflow.visible,
                                 ),
                               ),
                             ],
