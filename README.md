@@ -1,16 +1,27 @@
-# shecan
+# She Can
 
-A new Flutter project.
+A Flutter application built with clean architecture principles.
 
-## Getting Started
+## Folder Structure
 
-This project is a starting point for a Flutter application.
+This project follows clean architecture patterns to ensure maintainability, testability, and
+scalability:
 
-A few resources to get you started if this is your first Flutter project:
+```
+lib/
+├── main.dart                 # Application entry point
+├── core/                     # Core functionality shared across features
+│   ├── di/                   # Dependency injection setup
+│   ├── router/               # App routing configuration
+│   ├── services/             # Core services (API, storage, etc.)
+│   └── theme/                # App theming and styling
+└── features/                 # Feature-based modules
+    └── shecan/               # Main feature module
+```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### Clean Architecture Benefits
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- **Separation of Concerns**: Each layer has a specific responsibility
+- **Testability**: Easy to unit test business logic independently
+- **Maintainability**: Changes in one layer don't affect others
+- **Scalability**: Easy to add new features without breaking existing code
