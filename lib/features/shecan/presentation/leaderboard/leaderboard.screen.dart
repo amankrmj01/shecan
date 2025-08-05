@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/services/user_session_service.dart';
 import '../../domain/entities/leaderboard/leaderboard_entity.dart';
 import 'cubit/leaderboard_cubit.dart';
 
@@ -106,8 +108,13 @@ class LeaderboardScreen extends StatelessWidget {
   }
 
   Widget _buildLeaderboardCard(LeaderboardEntity user, int index) {
-    final isTopThree = user.rank <= 3;
-    final isCurrentUser = user.isCurrentUser;
+    // Calculate rank dynamically based on position in sorted list (index + 1)
+    final rank = index + 1;
+    final isTopThree = rank <= 3;
+
+    // Check if this user is the currently logged-in user
+    final userSession = UserSessionService();
+    final isCurrentUser = userSession.isCurrentUser(user.email);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -134,18 +141,14 @@ class LeaderboardScreen extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: isTopThree ? _getRankColor(user.rank) : Colors.grey[300],
+                color: isTopThree ? _getRankColor(rank) : Colors.grey[300],
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Center(
                 child: isTopThree
-                    ? Icon(
-                        _getRankIcon(user.rank),
-                        color: Colors.white,
-                        size: 20,
-                      )
+                    ? Icon(_getRankIcon(rank), color: Colors.white, size: 20)
                     : Text(
-                        '${user.rank}',
+                        '$rank',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.white,

@@ -3,16 +3,16 @@ class LeaderboardEntity {
   final String name;
   final String avatar;
   final int points;
-  final int rank;
-  final bool isCurrentUser;
+  final String email;
+  final String password;
 
   const LeaderboardEntity({
     required this.id,
     required this.name,
     required this.avatar,
     required this.points,
-    required this.rank,
-    required this.isCurrentUser,
+    required this.email,
+    required this.password,
   });
 
   @override
@@ -23,12 +23,12 @@ class LeaderboardEntity {
         other.name == name &&
         other.avatar == avatar &&
         other.points == points &&
-        other.rank == rank &&
-        other.isCurrentUser == isCurrentUser;
+        other.email == email &&
+        other.password == password;
   }
 
   @override
   int get hashCode {
-    return Object.hash(id, name, avatar, points, rank, isCurrentUser);
+    return Object.hash(id, name, avatar, points, email, password);
   }
 }

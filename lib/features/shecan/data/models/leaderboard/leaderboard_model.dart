@@ -1,26 +1,27 @@
 import '../../../domain/entities/leaderboard/leaderboard_entity.dart';
 
-class LeaderboardModel {
+class LeaderboardModel implements Comparable<LeaderboardModel> {
   final String name;
   final int score;
-  final int rank;
-  final bool isCurrentUser;
+  final String email;
+  final String password;
 
   const LeaderboardModel({
     required this.name,
     required this.score,
-    required this.rank,
-    this.isCurrentUser = false,
+    required this.email,
+    required this.password,
   });
 
   LeaderboardEntity toEntity() {
     return LeaderboardEntity(
-      id: rank.toString(),
+      id: name.toLowerCase().replaceAll(' ', '_'),
+      // Use name as unique ID
       name: name,
       avatar: 'https://via.placeholder.com/50',
       points: score,
-      rank: rank,
-      isCurrentUser: isCurrentUser,
+      email: email,
+      password: password,
     );
   }
 
@@ -28,18 +29,32 @@ class LeaderboardModel {
     return LeaderboardModel(
       name: json['name'] as String,
       score: json['score'] as int,
-      rank: json['rank'] as int,
-      isCurrentUser: json['isCurrentUser'] as bool? ?? false,
+      email: json['email'] as String,
+      password: json['password'] as String,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'score': score,
-      'rank': rank,
-      'isCurrentUser': isCurrentUser,
-    };
+    return {'name': name, 'score': score, 'email': email, 'password': password};
+  }
+
+  // Compare function for automatic sorting by score (highest first)
+  @override
+  int compareTo(LeaderboardModel other) {
+    // Sort by score in descending order (highest score first)
+    int scoreComparison = other.score.compareTo(score);
+
+    // If scores are equal, sort alphabetically by name
+    if (scoreComparison == 0) {
+      return name.compareTo(other.name);
+    }
+
+    return scoreComparison;
+  }
+
+  // Helper method to get rank based on position in sorted list
+  int getRankInList(List<LeaderboardModel> sortedList) {
+    return sortedList.indexOf(this) + 1;
   }
 
   @override
@@ -48,20 +63,17 @@ class LeaderboardModel {
     return other is LeaderboardModel &&
         other.name == name &&
         other.score == score &&
-        other.rank == rank &&
-        other.isCurrentUser == isCurrentUser;
+        other.email == email &&
+        other.password == password;
   }
 
   @override
   int get hashCode {
-    return name.hashCode ^
-        score.hashCode ^
-        rank.hashCode ^
-        isCurrentUser.hashCode;
+    return name.hashCode ^ score.hashCode ^ email.hashCode ^ password.hashCode;
   }
 
   @override
   String toString() {
-    return 'LeaderboardModel(name: $name, score: $score, rank: $rank, isCurrentUser: $isCurrentUser)';
+    return 'LeaderboardModel(name: $name, score: $score, email: $email)';
   }
 }

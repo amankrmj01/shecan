@@ -1,5 +1,6 @@
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
+
 import '../../features/shecan/data/datasources/announcement/announcement_data_source.dart';
 import '../../features/shecan/data/datasources/announcement/announcement_local_data_source.dart';
 import '../../features/shecan/data/datasources/announcement/announcement_remote_data_source.dart';
@@ -8,11 +9,12 @@ import '../../features/shecan/data/repositories/announcement/announcement_reposi
 import '../../features/shecan/data/repositories/leaderboard/leaderboard_repository.dart';
 import '../../features/shecan/domain/repositories/announcement/announcement_repository.dart';
 import '../../features/shecan/domain/repositories/leaderboard/leaderboard_repository.dart';
-import '../../features/shecan/domain/usecases/leaderboard/get_leaderboard_usecase.dart';
-import '../../features/shecan/services/announcement_service.dart';
 import '../../features/shecan/domain/usecases/announcement_usecases.dart';
+import '../../features/shecan/domain/usecases/leaderboard/get_leaderboard_usecase.dart';
 import '../../features/shecan/presentation/announcement/cubit/announcement_cubit.dart';
 import '../../features/shecan/presentation/leaderboard/cubit/leaderboard_cubit.dart';
+import '../../features/shecan/services/announcement_service.dart';
+import '../services/user_session_service.dart';
 
 final GetIt sl = GetIt.instance;
 
@@ -53,6 +55,8 @@ class DependencyInjection {
     );
 
     // Services
+    sl.registerLazySingleton<UserSessionService>(() => UserSessionService());
+
     sl.registerLazySingleton<AnnouncementService>(
       () => AnnouncementService(sl<AnnouncementRepository>()),
     );

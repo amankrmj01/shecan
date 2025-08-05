@@ -13,6 +13,7 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -52,11 +53,15 @@ class _SignupScreenState extends State<SignupScreen> {
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                state.message,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 16,
+                              Expanded(
+                                child: Text(
+                                  state.message,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 16,
+                                  ),
+                                  overflow: TextOverflow.visible,
+                                  softWrap: true,
                                 ),
                               ),
                             ],
@@ -84,11 +89,15 @@ class _SignupScreenState extends State<SignupScreen> {
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                state.error,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 16,
+                              Expanded(
+                                child: Text(
+                                  state.error,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 16,
+                                  ),
+                                  softWrap: true,
+                                  overflow: TextOverflow.visible,
                                 ),
                               ),
                             ],
@@ -96,7 +105,6 @@ class _SignupScreenState extends State<SignupScreen> {
                           backgroundColor: Colors.red,
                           duration: const Duration(seconds: 3),
                           behavior: SnackBarBehavior.floating,
-                          margin: const EdgeInsets.all(16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -140,34 +148,42 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                         const SizedBox(height: 40),
 
-                        _buildTextField(
-                          controller: _fullNameController,
-                          label: 'Full Name',
-                          icon: Icons.person_outline,
-                        ),
-                        const SizedBox(height: 20),
+                        Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              _buildTextField(
+                                controller: _fullNameController,
+                                label: 'Full Name',
+                                icon: Icons.person_outline,
+                              ),
+                              const SizedBox(height: 20),
 
-                        _buildTextField(
-                          controller: _emailController,
-                          label: 'Email Address',
-                          icon: Icons.email_outlined,
-                        ),
-                        const SizedBox(height: 20),
+                              _buildTextField(
+                                controller: _emailController,
+                                label: 'Email Address',
+                                icon: Icons.email_outlined,
+                              ),
+                              const SizedBox(height: 20),
 
-                        _buildTextField(
-                          controller: _passwordController,
-                          label: 'Password',
-                          icon: Icons.lock_outline,
-                          obscureText: true,
-                        ),
-                        const SizedBox(height: 20),
+                              _buildTextField(
+                                controller: _passwordController,
+                                label: 'Password',
+                                icon: Icons.lock_outline,
+                                obscureText: true,
+                              ),
+                              const SizedBox(height: 20),
 
-                        _buildTextField(
-                          controller: _confirmPasswordController,
-                          label: 'Confirm Password',
-                          icon: Icons.lock_outline,
-                          obscureText: true,
+                              _buildTextField(
+                                controller: _confirmPasswordController,
+                                label: 'Confirm Password',
+                                icon: Icons.lock_outline,
+                                obscureText: true,
+                              ),
+                            ],
+                          ),
                         ),
+
                         const SizedBox(height: 30),
 
                         ElevatedButton(
@@ -238,12 +254,83 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   void _handleSignup(BuildContext context) {
+    // Validate form before proceeding
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // Clear any previous errors
+    context.read<SignupCubit>().clearError();
+
+    // Get trimmed values
+    final fullName = _fullNameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
+
+    // Additional client-side validation
     final cubit = context.read<SignupCubit>();
+
+    // Validate full name
+    if (!cubit.isValidFullName(fullName)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              const Text('Please enter a valid full name (letters only)'),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // Validate email
+    if (!cubit.isValidEmail(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              const Text('Please enter a valid email address'),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // Validate password match
+    if (!cubit.doPasswordsMatch(password, confirmPassword)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              const Text('Passwords do not match'),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // Perform signup
     cubit.signup(
-      fullName: _fullNameController.text.trim(),
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-      confirmPassword: _confirmPasswordController.text.trim(),
+      fullName: fullName,
+      email: email,
+      password: password,
+      confirmPassword: confirmPassword,
     );
   }
 

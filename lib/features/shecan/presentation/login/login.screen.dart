@@ -13,6 +13,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -136,21 +137,29 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 40),
 
-                        _buildTextField(
-                          controller: _emailController,
-                          label: 'Email Address',
-                          icon: Icons.email_outlined,
-                          keyboardType: TextInputType.emailAddress,
-                        ),
-                        const SizedBox(height: 20),
+                        Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              _buildTextField(
+                                controller: _emailController,
+                                label: 'Email Address',
+                                icon: Icons.email_outlined,
+                                keyboardType: TextInputType.emailAddress,
+                              ),
+                              const SizedBox(height: 20),
 
-                        _buildTextField(
-                          controller: _passwordController,
-                          label: 'Password',
-                          icon: Icons.lock_outline,
-                          obscureText: true,
-                          keyboardType: TextInputType.visiblePassword,
+                              _buildTextField(
+                                controller: _passwordController,
+                                label: 'Password',
+                                icon: Icons.lock_outline,
+                                obscureText: true,
+                                keyboardType: TextInputType.visiblePassword,
+                              ),
+                            ],
+                          ),
                         ),
+
                         const SizedBox(height: 30),
 
                         ElevatedButton(
@@ -221,11 +230,39 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleLogin(BuildContext context) {
+    // Validate form before proceeding
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // Clear any previous errors
+    context.read<LoginCubit>().clearError();
+
+    // Get trimmed values
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    // Additional client-side validation
     final cubit = context.read<LoginCubit>();
-    cubit.login(
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-    );
+    if (!cubit.isValidEmail(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              const Text('Please enter a valid email address'),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    // Perform login
+    cubit.login(email: email, password: password);
   }
 
   Widget _buildTextField({

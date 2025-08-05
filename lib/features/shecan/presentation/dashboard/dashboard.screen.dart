@@ -1,12 +1,15 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+
+import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/services/user_session_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -19,14 +22,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     with TickerProviderStateMixin {
   late AnimationController _donationController;
   late Animation<double> _donationAnimation;
-  final int targetDonationAmount = 5000;
+  late final int targetDonationAmount;
   final GlobalKey _qrKey = GlobalKey();
+
+  final userSession = sl<UserSessionService>();
 
   @override
   void initState() {
     super.initState();
-
-    // Initialize the animation controller
+    targetDonationAmount = userSession.currentUserScore;
     _donationController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
@@ -83,6 +87,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildWelcomeCard() {
+    final userName = userSession.currentUserName;
+
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 4,
@@ -92,9 +98,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Welcome, Alex!',
-              style: TextStyle(
+            Text(
+              'Welcome, $userName!',
+              style: const TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -121,7 +127,8 @@ class _DashboardScreenState extends State<DashboardScreen>
       children: [
         _buildStatCard(
           title: 'Referral Code',
-          value: 'alex2025',
+          value:
+              '${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025',
           icon: Icons.qr_code_2_rounded,
           color: Colors.orangeAccent,
         ),
@@ -136,37 +143,46 @@ class _DashboardScreenState extends State<DashboardScreen>
     required IconData icon,
     required Color color,
   }) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            CircleAvatar(
-              backgroundColor: color.withAlpha((0.15 * 255).toInt()),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+    return InkWell(
+      onTap: _showQRCodeDialog,
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withAlpha((0.15 * 255).toInt()),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  ),
+                child: Icon(icon, color: color, size: 32),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey,
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -271,31 +287,36 @@ class _DashboardScreenState extends State<DashboardScreen>
   }) {
     return AspectRatio(
       aspectRatio: 1,
-      child: Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        color: unlocked ? Colors.white : Colors.grey[200],
-        elevation: unlocked ? 2 : 0,
-        child: Opacity(
-          opacity: unlocked ? 1.0 : 0.5,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 40,
-                color: unlocked ? Colors.amber : Colors.grey[500],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                  color: unlocked ? Colors.black87 : Colors.grey[600],
+      child: GestureDetector(
+        onTap: () => _showRewardSnackbar(label, unlocked),
+        child: Card(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          color: unlocked ? Colors.white : Colors.grey[200],
+          elevation: unlocked ? 2 : 0,
+          child: Opacity(
+            opacity: unlocked ? 1.0 : 0.5,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 40,
+                  color: unlocked ? Colors.amber : Colors.grey[500],
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: unlocked ? Colors.black87 : Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -355,12 +376,16 @@ class _DashboardScreenState extends State<DashboardScreen>
                             size: 20,
                           ),
                           const SizedBox(width: 8),
-                          const Text(
-                            'alex2025',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.2,
+                          Flexible(
+                            child: Text(
+                              '${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1.2,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -394,8 +419,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   void _shareReferralCode() {
-    const String referralCode = 'alex2025';
-    const String shareText =
+    String referralCode =
+        '${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025';
+    final String shareText =
         '🎉 Join me on Shecan and start making a difference! '
         'Use my referral code: $referralCode '
         'to get started. Together we can create positive impact! '
@@ -469,7 +495,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                             color: Colors.white,
                             padding: const EdgeInsets.all(10),
                             child: QrImageView(
-                              data: 'https://shecan.app/referral/alex2025',
+                              data:
+                                  'https://shecan.app/referral/${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025',
                               version: QrVersions.auto,
                               size: 200.0,
                               gapless: true,
@@ -549,14 +576,16 @@ class _DashboardScreenState extends State<DashboardScreen>
         // Get temporary directory
         final Directory tempDir = await getTemporaryDirectory();
         final String fileName =
-            'qr_code_alex2025_${DateTime.now().millisecondsSinceEpoch}.png';
+            'qr_code_${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025_${DateTime.now().millisecondsSinceEpoch}.png';
         final File file = await File(
           '${tempDir.path}/$fileName',
         ).writeAsBytes(pngBytes);
 
-        const String referralCode = 'alex2025';
-        const String appUrl = 'https://shecan.app/referral/alex2025';
-        const String shareText =
+        String referralCode =
+            '${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025';
+        String appUrl =
+            'https://shecan.app/referral/${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025';
+        final String shareText =
             '🎉 Scan to join the team and spreading happiness!\n\n'
             'Use my referral code: $referralCode\n'
             'Or visit: $appUrl\n\n'
@@ -574,9 +603,11 @@ class _DashboardScreenState extends State<DashboardScreen>
       }
     } catch (e) {
       // Fallback to text-only sharing if image capture fails
-      const String referralCode = 'alex2025';
-      const String appUrl = 'https://shecan.app/referral/alex2025';
-      const String shareText =
+      String referralCode =
+          '${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025';
+      String appUrl =
+          'https://shecan.app/referral/${userSession.currentUserName.toLowerCase().split(' ').join('_')}2025';
+      final String shareText =
           '🎉 Scan to join the team and spreading happiness!\n\n'
           'Use my referral code: $referralCode\n'
           'Visit: $appUrl\n\n'
@@ -599,5 +630,90 @@ class _DashboardScreenState extends State<DashboardScreen>
         );
       }
     }
+  }
+
+  void _showRewardSnackbar(String label, bool unlocked) {
+    String message;
+
+    // Define custom messages and tasks for each reward
+    switch (label) {
+      case 'Top Performer':
+        message = unlocked
+            ? 'You have earned this reward!\nThis reward is for being a top performer in donations and referrals.'
+            : 'Complete this task to achieve this reward:\nReach ₹15,000 in total donations and refer 10+ friends.';
+        break;
+      case '₹10k Club':
+        message = unlocked
+            ? 'You have earned this reward!\nThis reward is for raising over ₹10,000 in donations.'
+            : 'Complete this task to achieve this reward:\nRaise ₹10,000 or more in total donations.';
+        break;
+      case 'Streak Master':
+        message = unlocked
+            ? 'You have earned this reward!\nThis reward is for maintaining daily activity streaks.'
+            : 'Complete this task to achieve this reward:\nMaintain a 30-day daily login and activity streak.';
+        break;
+      case 'Team Player':
+        message = unlocked
+            ? 'You have earned this reward!\nThis reward is for excellent teamwork and collaboration.'
+            : 'Complete this task to achieve this reward:\nSuccessfully collaborate on 5 team projects.';
+        break;
+      default:
+        message = unlocked
+            ? 'You have earned this reward!\nThis reward is for your outstanding contribution.'
+            : 'Complete this task to achieve this reward:\nKeep working towards your goals!';
+    }
+
+    // Add haptic feedback
+    HapticFeedback.lightImpact();
+
+    // Show simple SnackBar with bottom animation
+    ScaffoldMessenger.of(context).clearSnackBars();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      snackBarAnimationStyle: AnimationStyle(
+        curve: Curves.elasticOut,
+        duration: Duration(milliseconds: 800),
+        reverseCurve: Curves.easeInBack,
+        reverseDuration: Duration(milliseconds: 300),
+      ),
+      SnackBar(
+        content: AnimatedContainer(
+          duration: Duration(milliseconds: 500),
+          curve: Curves.easeOutBack,
+          child: Row(
+            children: [
+              AnimatedContainer(
+                duration: Duration(milliseconds: 300),
+                margin: EdgeInsets.only(right: 12),
+                child: Icon(
+                  unlocked ? Icons.check_circle : Icons.info_outline,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  message,
+                  textAlign: TextAlign.left,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        backgroundColor: unlocked ? Colors.green[600] : Colors.orange[600],
+        duration: const Duration(seconds: 5),
+        behavior: SnackBarBehavior.floating,
+        dismissDirection: DismissDirection.horizontal,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 8,
+        margin: EdgeInsets.all(16),
+      ),
+    );
   }
 }

@@ -20,11 +20,9 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
   @override
   Future<LeaderboardEntity?> getCurrentUserRank() async {
     try {
-      final models = await dataSource.getLeaderboardData();
-      final currentUserModel = models
-          .where((model) => model.isCurrentUser)
-          .firstOrNull;
-      return currentUserModel?.toEntity();
+      // Since we removed isCurrentUser, we'll need to implement different logic
+      // For now, returning null as this method will need custom implementation
+      return null;
     } catch (e) {
       throw Exception('Failed to get current user rank: $e');
     }
